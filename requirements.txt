@@ -1,0 +1,8 @@
+PySide6
+faster-whisper
+pysrt
+opencv-python
+numpy
+ 
+
+ 
