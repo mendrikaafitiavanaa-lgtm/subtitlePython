@@ -1,18 +1,14 @@
 """Configuration des langues, modèles et paramètres par défaut."""
 
 SUPPORTED_LANGUAGES = {
-    "auto": "Détection automatique",
     "fr": "Français",
     "en": "Anglais",
-    "ja": "Japonais (Anime / VO)",
-    "es": "Espagnol",
-    "de": "Allemand",
-    "it": "Italien",
-    "pt": "Portugais",
-    "ko": "Coréen",
-    "zh": "Chinois",
-    "ru": "Russe",
-    "ar": "Arabe",
+}
+
+SPOKEN_LANGUAGES = {
+    "auto": "Détection automatique",
+    "en": "Anglais",
+    "fr": "Français",
 }
 
 WHISPER_MODELS = {
@@ -43,7 +39,7 @@ WHISPER_MODELS = {
     },
 }
 
-DEFAULT_MODEL = "tiny"
+DEFAULT_MODEL = "small"
 
 SUPPORTED_VIDEO_EXTENSIONS = (
     "*.mp4",
@@ -66,10 +62,10 @@ SUPPORTED_VIDEO_EXTENSIONS = (
 
 
 def normalize_language(language: str | None) -> str:
-    """Normalise le code langue en chaîne standard."""
+    """Normalise le code langue en chaîne standard (fr, en ou auto)."""
     if not language:
-        return "auto"
+        return "fr"
     value = language.strip().lower()
-    if value in SUPPORTED_LANGUAGES:
+    if value in ("fr", "en", "auto"):
         return value
-    return "auto"
+    return "fr"

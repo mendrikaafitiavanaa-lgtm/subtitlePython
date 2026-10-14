@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
@@ -30,6 +31,7 @@ from PySide6.QtWidgets import (
 
 from src.core.config import (
     DEFAULT_MODEL,
+    SPOKEN_LANGUAGES,
     SUPPORTED_LANGUAGES,
     SUPPORTED_VIDEO_EXTENSIONS,
     WHISPER_MODELS,
@@ -118,7 +120,7 @@ class MainWindow(QMainWindow):
 
         # Groupe 2 : Options de transcription & Langues
         options_group = QGroupBox("2. Langues & Paramètres")
-        options_layout = QHBoxLayout(options_group)
+        options_layout = QHBoxLayout()
 
         # Colonne Langue source & Modèle
         left_col = QVBoxLayout()
@@ -126,7 +128,7 @@ class MainWindow(QMainWindow):
         lbl_source = QLabel("🗣️ Langue parlée dans la vidéo :")
         lbl_source.setStyleSheet("font-weight: bold;")
         self.combo_source_lang = QComboBox()
-        for code, name in SUPPORTED_LANGUAGES.items():
+        for code, name in SPOKEN_LANGUAGES.items():
             self.combo_source_lang.addItem(f"{name} ({code})", code)
         left_col.addWidget(lbl_source)
         left_col.addWidget(self.combo_source_lang)
@@ -176,7 +178,8 @@ class MainWindow(QMainWindow):
             item = QListWidgetItem(f"{label} ({code})")
             item.setData(Qt.ItemDataRole.UserRole, code)
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            item.setCheckState(Qt.CheckState.Checked if code == "auto" else Qt.CheckState.Unchecked)
+            # Par défaut, cocher le Français
+            item.setCheckState(Qt.CheckState.Checked if code == "fr" else Qt.CheckState.Unchecked)
             self.language_list.addItem(item)
 
         right_col.addWidget(self.language_list)
@@ -191,16 +194,46 @@ class MainWindow(QMainWindow):
         btn_quick_en.setObjectName("btn-secondary")
         btn_quick_en.clicked.connect(lambda: self._set_quick_lang("en"))
 
-        btn_quick_auto = QPushButton("⚡ Auto")
-        btn_quick_auto.setObjectName("btn-secondary")
-        btn_quick_auto.clicked.connect(lambda: self._set_quick_lang("auto"))
-
         quick_btns_layout.addWidget(btn_quick_fr)
         quick_btns_layout.addWidget(btn_quick_en)
-        quick_btns_layout.addWidget(btn_quick_auto)
         right_col.addLayout(quick_btns_layout)
 
         options_layout.addLayout(right_col, 1)
+
+        # Ligne Mots-clés / Vocabulaire d'entités & Contexte IA
+        keywords_row = QVBoxLayout()
+        lbl_kw = QLabel("💡 Mots-clés & Noms de personnages / Contexte (Logique floue & Prompt IA) :")
+        lbl_kw.setStyleSheet("font-weight: bold; margin-top: 6px;")
+        
+        kw_input_layout = QHBoxLayout()
+        self.input_keywords = QLineEdit()
+        self.input_keywords.setPlaceholderText("Ex: Ben Tennyson, Gwen, Grandpa Max, Omnitrix, Vilgax, Heatblast, Sauvage, Incassable...")
+        self.input_keywords.setText("Ben Tennyson, Gwen, Grandpa Max, Omnitrix, Vilgax, Heatblast, Wildmutt, Diamondhead, XLR8, Four Arms, Ripjaws, Stinkfly, Upgrade, Ghostfreak")
+        self.input_keywords.setStyleSheet("padding: 6px; font-size: 12px;")
+
+        btn_kw_ben10 = QPushButton("👽 Ben 10")
+        btn_kw_ben10.setObjectName("btn-secondary")
+        btn_kw_ben10.clicked.connect(lambda: self.input_keywords.setText(
+            "Ben Tennyson, Gwen, Grandpa Max, Omnitrix, Vilgax, Heatblast, Wildmutt, Diamondhead, XLR8, Four Arms, Ripjaws, Stinkfly, Upgrade, Ghostfreak"
+        ))
+
+        btn_kw_clear = QPushButton("🧹 Effacer")
+        btn_kw_clear.setObjectName("btn-secondary")
+        btn_kw_clear.clicked.connect(lambda: self.input_keywords.clear())
+
+        kw_input_layout.addWidget(self.input_keywords, 1)
+        kw_input_layout.addWidget(btn_kw_ben10)
+        kw_input_layout.addWidget(btn_kw_clear)
+
+        keywords_row.addWidget(lbl_kw)
+        keywords_row.addLayout(kw_input_layout)
+
+        # Ajouter au conteneur du groupe 2
+        options_container_layout = QVBoxLayout()
+        options_container_layout.addLayout(options_layout)
+        options_container_layout.addLayout(keywords_row)
+        options_group.setLayout(options_container_layout)
+
         top_layout.addWidget(options_group)
 
         # Boutons d'Action Principaux
@@ -336,7 +369,7 @@ class MainWindow(QMainWindow):
             if item.checkState() == Qt.CheckState.Checked:
                 selected.append(str(item.data(Qt.ItemDataRole.UserRole)))
         if not selected:
-            selected = ["auto"]
+            selected = ["fr"]
         return [normalize_language(c) for c in selected]
 
     def _clear_logs(self) -> None:
@@ -367,6 +400,10 @@ class MainWindow(QMainWindow):
         self.log_console.append(f"   • Langues cibles : {', '.join(languages)}")
 
         # Création et démarrage du Worker asynchrone sur QThread (Zero blocage UI)
+        custom_kw = self.input_keywords.text().strip()
+        if custom_kw:
+            self.log_console.append(f"   • Mots-clés / Contexte : {custom_kw}")
+
         self.thread = QThread()
         self.worker = SubtitleWorker(
             video_path=self.video_path,
@@ -374,6 +411,7 @@ class MainWindow(QMainWindow):
             languages=languages,
             source_language=source_lang,
             model_size=model_size,
+            custom_keywords=custom_kw,
         )
         self.worker.moveToThread(self.thread)
 

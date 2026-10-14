@@ -26,6 +26,7 @@ class SubtitleWorker(QObject):
         languages: list[str],
         source_language: str = "auto",
         model_size: str = "small",
+        custom_keywords: list[str] | str | None = None,
     ) -> None:
         super().__init__()
         self.video_path = video_path
@@ -33,6 +34,7 @@ class SubtitleWorker(QObject):
         self.languages = languages
         self.source_language = source_language
         self.model_size = model_size
+        self.custom_keywords = custom_keywords
         self._is_cancelled = False
 
     def cancel(self) -> None:
@@ -56,6 +58,7 @@ class SubtitleWorker(QObject):
             generator = SubtitleGenerator(
                 model_size=self.model_size,
                 language=self.languages[0] if self.languages else "auto",
+                custom_keywords=self.custom_keywords,
                 model_progress_callback=on_model_progress,
                 cancel_check=self.is_cancelled,
             )
